@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Odds Manager with Bootstrap</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+
+  <div class="container">
+    <h2 class="mb-4">Enter Odds for Up to 3 Games</h2>
+
+    <div class="row mb-3">
+      <!-- Game 1 -->
+      <div class="col-md-4">
+        <div class="card p-3 mb-3">
+          <h5>Game 1</h5>
+          <input type="number" class="form-control mb-2" id="home1" placeholder="Home Odds" step="any">
+          <input type="number" class="form-control mb-2" id="draw1" placeholder="Draw Odds" step="any">
+          <input type="number" class="form-control mb-2" id="away1" placeholder="Away Odds" step="any">
+        </div>
+      </div>
+
+      <!-- Game 2 -->
+      <div class="col-md-4">
+        <div class="card p-3 mb-3">
+          <h5>Game 2</h5>
+          <input type="number" class="form-control mb-2" id="home2" placeholder="Home Odds" step="any">
+          <input type="number" class="form-control mb-2" id="draw2" placeholder="Draw Odds" step="any">
+          <input type="number" class="form-control mb-2" id="away2" placeholder="Away Odds" step="any">
+        </div>
+      </div>
+
+      <!-- Game 3 -->
+      <div class="col-md-4">
+        <div class="card p-3 mb-3">
+          <h5>Game 3</h5>
+          <input type="number" class="form-control mb-2" id="home3" placeholder="Home Odds" step="any">
+          <input type="number" class="form-control mb-2" id="draw3" placeholder="Draw Odds" step="any">
+          <input type="number" class="form-control mb-2" id="away3" placeholder="Away Odds" step="any">
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <button class="btn btn-primary" onclick="submitAllGames()">Submit All Games</button>
+    </div>
+
+    <div class="mb-3">
+      <input type="text" id="searchInput" class="form-control" placeholder="Search Home, Draw, or Away Odds" oninput="filterTable()">
+    </div>
+
+    <h4 class="mt-4">Saved Records</h4>
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered" id="recordsTable">
+        <thead class="table-dark">
+          <tr>
+            <th>Game</th>
+            <th>Home</th>
+            <th>Draw</th>
+            <th>Away</th>
+            <th>Result</th>
+            <th>Timestamp</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function generateKey(home, draw, away) {
+      return `odds_${home}_${draw}_${away}`;
+    }
+
+    function saveOdds(gameNumber, home, draw, away) {
+      const key = generateKey(home, draw, away);
+      const now = new Date().toLocaleString();
+
+      if (localStorage.getItem(key)) {
+        alert(`Game ${gameNumber}: Already exists`);
+      } else {
+        const result = prompt(`Game ${gameNumber} - Enter result (Home, Draw, Away):`);
+        if (!result) return;
+
+        const data = { game: gameNumber, result, timestamp: now, home, draw, away };
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+    }
+
+    function submitAllGames() {
+      for (let i = 1; i <= 3; i++) {
+        const home = document.getElementById(`home${i}`).value.trim();
+        const draw = document.getElementById(`draw${i}`).value.trim();
+        const away = document.getElementById(`away${i}`).value.trim();
+
+        if (home && draw && away) {
+          saveOdds(i, home, draw, away);
+        }
+      }
+      loadRecords();
+    }
+
+    function loadRecords() {
+      const tbody = document.querySelector("#recordsTable tbody");
+      tbody.innerHTML = "";
+
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("odds_")) {
+          const record = JSON.parse(localStorage.getItem(key));
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${record.game}</td>
+            <td>${record.home}</td>
+            <td>${record.draw}</td>
+            <td>${record.away}</td>
+            <td>${record.result}</td>
+            <td>${record.timestamp}</td>
+            <td>
+              <button class="btn btn-sm btn-warning me-2" onclick="editRecord('${key}')">Edit</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteRecord('${key}')">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      });
+    }
+
+    function editRecord(key) {
+      const record = JSON.parse(localStorage.getItem(key));
+      const result = prompt("Edit result:", record.result);
+      if (result) {
+        record.result = result;
+        record.timestamp = new Date().toLocaleString();
+        localStorage.setItem(key, JSON.stringify(record));
+        loadRecords();
+      }
+    }
+
+    function deleteRecord(key) {
+      if (confirm("Delete this record?")) {
+        localStorage.removeItem(key);
+        loadRecords();
+      }
+    }
+
+    function filterTable() {
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const rows = document.querySelectorAll("#recordsTable tbody tr");
+
+      rows.forEach(row => {
+        const home = row.children[1].textContent.toLowerCase();
+        const draw = row.children[2].textContent.toLowerCase();
+        const away = row.children[3].textContent.toLowerCase();
+
+        if (home.includes(search) || draw.includes(search) || away.includes(search)) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      });
+    }
+
+    loadRecords();
+  </script>
+
+</body>
+</html>
