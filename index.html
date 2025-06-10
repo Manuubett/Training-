@@ -2,205 +2,199 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Odds Manager - Manual Game Input</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Odds Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light p-4">
-  <div class="container">
-    <h2 class="mb-4">Enter Odds for Multiple Games</h2>
 
-    <div id="gamesContainer" class="row mb-3"></div>
+<body class="bg-light">
+  <div class="container py-4">
+    <h1 class="mb-4">Game Odds Entry</h1>
+    <div id="gameContainer" class="mb-3"></div>
 
-    <div class="mb-3">
-      <button class="btn btn-success" onclick="addGame()">+ Add Game</button>
-      <button class="btn btn-primary ms-2" onclick="submitAllGames()">Submit All Games</button>
-      <button class="btn btn-outline-secondary btn-sm ms-2" onclick="clearInputs()">Clear Inputs Now</button>
-    </div>
+    <button class="btn btn-success mb-3" onclick="addGame()">+ Add Game</button>
+    <button class="btn btn-primary mb-3 ms-2" onclick="submitAll()">Submit All</button>
+    <button class="btn btn-secondary mb-3 ms-2" onclick="clearInputs()">Clear Inputs</button>
 
-    <p id="timeoutMsg" class="text-danger fw-bold mt-2"></p>
+    <input type="text" class="form-control mb-4" placeholder="Search odds or team names..." oninput="filterRecords(this.value)" />
 
-    <div class="mb-3 mt-4">
-      <input
-        type="text"
-        id="searchInput"
-        class="form-control"
-        placeholder="Search Home, Draw, or Away Odds"
-        oninput="filterTable()"
-      />
-    </div>
-
-    <h4 class="mt-4">Saved Records</h4>
-    <div class="table-responsive">
-      <table class="table table-striped table-bordered" id="recordsTable">
-        <thead class="table-dark">
-          <tr>
-            <th>Game</th>
-            <th>Home</th>
-            <th>Draw</th>
-            <th>Away</th>
-            <th>Result</th>
-            <th>Timestamp</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <h4>Saved Records</h4>
+    <table class="table table-bordered table-striped">
+      <thead class="table-light">
+        <tr>
+          <th>Game</th>
+          <th>Home</th>
+          <th>Draw</th>
+          <th>Away</th>
+          <th>Result</th>
+          <th>Home Previous</th>
+          <th>Away Previous</th>
+          <th>Time</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="savedRecords"></tbody>
+    </table>
   </div>
 
+  <datalist id="gameNamesList"></datalist>
+
   <script>
-    let gameCount = 0;
+    const teams = [
+      "Burnley", "Palace", "Newcastle", "Brighton", "Leeds", "Leicester", "Fulham",
+      "Manchester Reds", "Liverpool", "Sheffield U", "Tottenham", "Southampton",
+      "London Reds", "Manchester Blue", "Everton", "London Blues", "Aston V", "Wolves",
+      "West Ham", "West Brom"
+    ];
 
-    function addGame(game = {}) {
-      gameCount++;
-      const container = document.getElementById("gamesContainer");
+    function generateMatchups() {
+      const datalist = document.getElementById("gameNamesList");
+      teams.forEach((home, i) => {
+        teams.forEach((away, j) => {
+          if (i !== j) {
+            const option = document.createElement("option");
+            option.value = `${home} vs ${away}`;
+            datalist.appendChild(option);
+          }
+        });
+      });
+    }
 
-      const col = document.createElement("div");
-      col.className = "col-md-4";
-      col.innerHTML = `
-        <div class="card p-3 mb-3">
-          <h5>Game ${gameCount}</h5>
-          <input type="text" class="form-control mb-2" id="game${gameCount}" placeholder="Game Name" value="${game.name || ''}" />
-          <input type="number" class="form-control mb-2" id="home${gameCount}" placeholder="Home Odds" step="any" value="${game.home || ''}" />
-          <input type="number" class="form-control mb-2" id="draw${gameCount}" placeholder="Draw Odds" step="any" value="${game.draw || ''}" />
-          <input type="number" class="form-control mb-2" id="away${gameCount}" placeholder="Away Odds" step="any" value="${game.away || ''}" />
-          <button type="button" class="btn btn-danger btn-sm mt-2 remove-game-btn">Remove</button>
+    function addGame() {
+      const container = document.getElementById("gameContainer");
+      const div = document.createElement("div");
+      div.className = "card p-3 mb-3";
+      div.innerHTML = `
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label">Game</label>
+            <input type="text" list="gameNamesList" class="form-control" placeholder="Game Name">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Home</label>
+            <input type="number" class="form-control" placeholder="Home Odds">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Draw</label>
+            <input type="number" class="form-control" placeholder="Draw Odds">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Away</label>
+            <input type="number" class="form-control" placeholder="Away Odds">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Home Previous</label>
+            <input type="text" class="form-control" placeholder="e.g. W 2-1">
+          </div>
+          <div class="col-md-3 mt-2">
+            <label class="form-label">Away Previous</label>
+            <input type="text" class="form-control" placeholder="e.g. L 0-3">
+          </div>
+          <div class="col-md-12 mt-3">
+            <button class="btn btn-danger w-100" onclick="this.closest('.card').remove()">Remove</button>
+          </div>
         </div>
       `;
-
-      col.querySelector(".remove-game-btn").addEventListener("click", () => {
-        col.remove();
-      });
-
-      container.appendChild(col);
+      container.appendChild(div);
     }
 
-    function generateKey(name, home, draw, away) {
-      return `odds_${name}_${home}_${draw}_${away}`;
-    }
+    function submitAll() {
+      const games = document.querySelectorAll("#gameContainer .card");
+      const records = JSON.parse(localStorage.getItem("gameOdds") || "[]");
 
-    function saveOdds(gameNumber, name, home, draw, away) {
-      const key = generateKey(name, home, draw, away);
-      const now = new Date().toLocaleString();
-
-      if (localStorage.getItem(key)) {
-        alert(`Game ${gameNumber}: Already exists`);
-      } else {
-        const result = prompt(`Game ${gameNumber} - Enter result (Home, Draw, Away):`);
-        if (!result) return;
-
-        const data = { game: name, result, timestamp: now, home, draw, away };
-        localStorage.setItem(key, JSON.stringify(data));
-      }
-    }
-
-    function submitAllGames() {
-      let submitted = false;
-      for (let i = 1; i <= gameCount; i++) {
-        const nameElem = document.getElementById(`game${i}`);
-        const homeElem = document.getElementById(`home${i}`);
-        const drawElem = document.getElementById(`draw${i}`);
-        const awayElem = document.getElementById(`away${i}`);
-
-        const name = nameElem ? nameElem.value.trim() : "";
-        const home = homeElem ? homeElem.value.trim() : "";
-        const draw = drawElem ? drawElem.value.trim() : "";
-        const away = awayElem ? awayElem.value.trim() : "";
+      games.forEach(card => {
+        const inputs = card.querySelectorAll("input");
+        const [name, home, draw, away, homePrev, awayPrev] = [...inputs].map(input => input.value.trim());
 
         if (name && home && draw && away) {
-          saveOdds(i, name, home, draw, away);
-          submitted = true;
+          const result = prompt(`Enter current result for ${name} (Home / Draw / Away):`, "Home") || "Unknown";
+          records.push({
+            name, home, draw, away, result,
+            homePrev,
+            awayPrev,
+            time: new Date().toLocaleString()
+          });
         }
-      }
+      });
 
-      if (submitted) {
-        loadRecords();
-        document.getElementById("timeoutMsg").textContent = "Submitted successfully!";
-      } else {
-        document.getElementById("timeoutMsg").textContent = "Please fill all fields for at least one game.";
+      localStorage.setItem("gameOdds", JSON.stringify(records));
+      document.getElementById("gameContainer").innerHTML = "";
+      displayRecords();
+    }
+
+    function displayRecords(filter = "") {
+      const tbody = document.getElementById("savedRecords");
+      const records = JSON.parse(localStorage.getItem("gameOdds") || "[]");
+
+      tbody.innerHTML = records.map((r, i) => {
+        if (!Object.values(r).some(val => val.toString().toLowerCase().includes(filter.toLowerCase()))) return "";
+
+        const resultColor = getResultColor(r.result);
+
+        return `
+          <tr>
+            <td>${r.name}</td>
+            <td>${r.home}</td>
+            <td>${r.draw}</td>
+            <td>${r.away}</td>
+            <td style="color: ${resultColor}; font-weight: bold;">${r.result}</td>
+            <td>${r.homePrev || ""}</td>
+            <td>${r.awayPrev || ""}</td>
+            <td>${r.time}</td>
+            <td>
+              <button class="btn btn-warning btn-sm me-1" onclick="editRecord(${i})">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function getResultColor(result) {
+      const r = result.toLowerCase();
+      if (r.includes("home")) return "green";
+      if (r.includes("draw")) return "blue";
+      if (r.includes("away")) return "red";
+      return "gray";
+    }
+
+    function editRecord(index) {
+      const records = JSON.parse(localStorage.getItem("gameOdds") || "[]");
+      const rec = records[index];
+
+      const newResult = prompt(`Edit result for ${rec.name}:`, rec.result);
+      const newHomePrev = prompt(`Edit Home Team Previous Result:`, rec.homePrev || "");
+      const newAwayPrev = prompt(`Edit Away Team Previous Result:`, rec.awayPrev || "");
+
+      if (newResult !== null && newResult.trim() !== "") {
+        rec.result = newResult.trim();
+        rec.homePrev = newHomePrev;
+        rec.awayPrev = newAwayPrev;
+        localStorage.setItem("gameOdds", JSON.stringify(records));
+        displayRecords();
+      }
+    }
+
+    function deleteRecord(index) {
+      const records = JSON.parse(localStorage.getItem("gameOdds") || "[]");
+      if (confirm(`Delete record for ${records[index].name}?`)) {
+        records.splice(index, 1);
+        localStorage.setItem("gameOdds", JSON.stringify(records));
+        displayRecords();
       }
     }
 
     function clearInputs() {
-      for (let i = 1; i <= gameCount; i++) {
-        const gameElem = document.getElementById(`game${i}`);
-        const homeElem = document.getElementById(`home${i}`);
-        const drawElem = document.getElementById(`draw${i}`);
-        const awayElem = document.getElementById(`away${i}`);
-
-        if (gameElem) gameElem.value = "";
-        if (homeElem) homeElem.value = "";
-        if (drawElem) drawElem.value = "";
-        if (awayElem) awayElem.value = "";
-      }
-      document.getElementById("timeoutMsg").textContent = "Inputs cleared.";
+      document.getElementById("gameContainer").innerHTML = "";
     }
 
-    function loadRecords() {
-      const tbody = document.querySelector("#recordsTable tbody");
-      tbody.innerHTML = "";
-
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("odds_")) {
-          const record = JSON.parse(localStorage.getItem(key));
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${record.game}</td>
-            <td>${record.home}</td>
-            <td>${record.draw}</td>
-            <td>${record.away}</td>
-            <td>${record.result}</td>
-            <td>${record.timestamp}</td>
-            <td>
-              <button class="btn btn-sm btn-warning me-2" onclick="editRecord('${key}')">Edit</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteRecord('${key}')">Delete</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        }
-      });
+    function filterRecords(value) {
+      displayRecords(value);
     }
 
-    function editRecord(key) {
-      const record = JSON.parse(localStorage.getItem(key));
-      const result = prompt("Edit result:", record.result);
-      if (result) {
-        record.result = result;
-        record.timestamp = new Date().toLocaleString();
-        localStorage.setItem(key, JSON.stringify(record));
-        loadRecords();
-      }
-    }
-
-    function deleteRecord(key) {
-      if (confirm("Delete this record?")) {
-        localStorage.removeItem(key);
-        loadRecords();
-      }
-    }
-
-    function filterTable() {
-      const search = document.getElementById("searchInput").value.toLowerCase();
-      const rows = document.querySelectorAll("#recordsTable tbody tr");
-
-      rows.forEach((row) => {
-        const home = row.children[1].textContent.toLowerCase();
-        const draw = row.children[2].textContent.toLowerCase();
-        const away = row.children[3].textContent.toLowerCase();
-
-        if (home.includes(search) || draw.includes(search) || away.includes(search)) {
-          row.style.display = "";
-        } else {
-          row.style.display = "none";
-        }
-      });
-    }
-
-    window.onload = () => {
-      addGame(); // Load at least one manually
-      loadRecords();
-    };
+    generateMatchups();
+    displayRecords();
+    addGame();
   </script>
 </body>
-  </html>
+</html>
